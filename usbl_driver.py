@@ -2,6 +2,8 @@
 import sys
 sys.path.insert(0, './pynmea2')
 
+import pdb
+
 import time
 import pynmea2
 import json
@@ -19,7 +21,7 @@ sockitOut = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # sockitOut.setblocking(False)
 
 #Radius of Earth
-R = Decimal(6378137)
+R = float(6378137)
 
 # gpsData = {
 #     'time_usec' : 0,                        # (uint64_t) Timestamp (micros since boot or Unix epoch)
@@ -80,41 +82,50 @@ R = Decimal(6378137)
 
 sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
 sampleGPS = "$GPGGA,200838.400,3845.0630,N,07727.2770,W,1,06,1.2,111.4,M,-33.4,M,,0000*6A"
+# rthData = pynmea2.parse(sampleRTH)
+# gpsData = pynmea2.parse(sampleGPS)
+# rovData = pynmea2.parse(sampleGPS)
+
 while True:
-    rthData = pynmea2.parse(sampleRTH)
-    gpsData = pynmea2.parse(sampleGPS)
-    rovData = pynmea2.parse(sampleGPS)
-
     #Update Data
+    try:
+        with open('/dev/ttyUSB0', 'r') as dev:
+            streamreader = pynmea2.NMEAStreamReader(dev)
+            for msg in streamreader.next():
+                rthData = msg
+    except:
+        print("Failed to read RTH")
 
-    # with open('/dev/ttyUSB0', 'r') as dev:
-    #     streamreader = pynmea2.NMEAStreamReader(dev)
-    #     for msg in streamreader.next():
-    #         rthData = msg
-    #
-    # with open('/dev/ttyACM0', 'r') as dev:
-    #     streamreader = pynmea2.NMEAStreamReader(dev)
-    #     for msg in streamreader.next():
-    #         gpsData = msg
-    #         rovData = msg
+
+    try:
+        with open('/dev/ttyACM0', 'r') as dev:
+            streamreader = pynmea2.NMEAStreamReader(dev)
+            for msg in streamreader.next():
+                gpsData = msg
+                rovData = msg
+    except:
+        print("Failed to read RTH")
 
     #Maths
     #Elevation 0 at horizon?
-    hr = rthData.sr * Decimal(math.cos(rthData.te))
+    hr = rthData.sr * math.cos(rthData.te)
 
-    dn = Decimal(math.cos(rthData.cb)) * hr
-    de = Decimal(math.sin(rthData.cb)) * hr
+    dn = math.cos(rthData.cb) * hr
+    de = math.sin(rthData.cb) * hr
 
     dLat = dn / R
-    dLon = de / (R * Decimal(math.cos(Decimal(math.pi) * Decimal(gpsData.lat) / Decimal(100))))
+    #pdb.set_trace()
 
-    newLat = Decimal(gpsData.lat) + dLat * Decimal(180) / Decimal(math.pi)
-    newLon = Decimal(gpsData.lon) + dLon * Decimal(180) / Decimal(math.pi)
+    dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
 
-    rovData.lat = newLat
-    rovData.lon = newLon
+    newLat = gpsData.latitude + dLat * 180 / math.pi
+    newLon = gpsData.longitude + dLon * 180 / math.pi
 
+    timestring = (str(gpsData.timestamp)[0:2] + str(gpsData.timestamp)[3:5] + str(gpsData.timestamp)[6:8])
+    rovSentence = pynmea2.GGA('GP', 'GGA', (timestring, str(newLat*100), str(gpsData.lat_dir), str(newLon*100), str(gpsData.lon_dir)))
+    print(str(gpsData))
+    #pdb.set_trace()
     #Send ROV data
-    rovSentence = pynmea2.GGA('GP', 'GGA', rovData)
-    print(rovSentence)
-    #sockitOut.sendto(str(rovData).encode('utf-8'), (ip, portnum))
+    # print("G: " , gpsData)
+    # print("R: " , rovData)
+    sockitOut.sendto(str(rovSentence), (ip, portnum))
