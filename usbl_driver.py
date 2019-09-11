@@ -7,6 +7,8 @@ import pynmea2
 import json
 import socket
 import serial
+import math
+from decimal import *
 from os import system
 
 # destination / output
@@ -17,7 +19,7 @@ sockitOut = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # sockitOut.setblocking(False)
 
 #Radius of Earth
-R = 6378137
+R = Decimal(6378137)
 
 # gpsData = {
 #     'time_usec' : 0,                        # (uint64_t) Timestamp (micros since boot or Unix epoch)
@@ -76,35 +78,42 @@ R = 6378137
 #     'satellites_visible' : 0                # (uint8_t) Number of satellites visible.
 # }
 
+sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
+sampleGPS = "$GPGGA,200838.400,3845.0630,N,07727.2770,W,1,06,1.2,111.4,M,-33.4,M,,0000*6A"
 while True:
-    #Update Data
-    with open('/dev/ttyUSB0', 'r') as dev:
-        streamreader = pynmea2.NMEAStreamReader(dev)
-        for msg in streamreader.next():
-            rthData = msg
+    rthData = pynmea2.parse(sampleRTH)
+    gpsData = pynmea2.parse(sampleGPS)
+    rovData = pynmea2.parse(sampleGPS)
 
-    with open('/dev/ttyACM0', 'r') as dev:
-        streamreader = pynmea2.NMEAStreamReader(dev)
-        for msg in streamreader.next():
-            gpsData = msg
-            rovData = msg
+    #Update Data
+
+    # with open('/dev/ttyUSB0', 'r') as dev:
+    #     streamreader = pynmea2.NMEAStreamReader(dev)
+    #     for msg in streamreader.next():
+    #         rthData = msg
+    #
+    # with open('/dev/ttyACM0', 'r') as dev:
+    #     streamreader = pynmea2.NMEAStreamReader(dev)
+    #     for msg in streamreader.next():
+    #         gpsData = msg
+    #         rovData = msg
 
     #Maths
     #Elevation 0 at horizon?
-    hr = rthData.sr * Math.cos(rthData.te)
+    hr = rthData.sr * Decimal(math.cos(rthData.te))
 
-    dn = math.cos(rthData.cb) * hr
-    de = math.sin(rthData.cb) * hr
+    dn = Decimal(math.cos(rthData.cb)) * hr
+    de = Decimal(math.sin(rthData.cb)) * hr
 
     dLat = dn / R
-    dLon = de / (R * math.cos(math.pi * lat / 100))
+    dLon = de / (R * Decimal(math.cos(Decimal(math.pi) * Decimal(gpsData.lat) / Decimal(100))))
 
-    newLat = lat + dlat * 180 / math.pi
-    newLon  lon + dLon * 180 / math.pi
+    newLat = Decimal(gpsData.lat) + dLat * Decimal(180) / Decimal(math.pi)
+    newLon = Decimal(gpsData.lon) + dLon * Decimal(180) / Decimal(math.pi)
 
     rovData.lat = newLat
     rovData.lon = newLon
 
     #Send ROV data
     print(rovData)
-    sockitOut.sendto(str(rovData), (ip, portnum))
+    sockitOut.sendto(str(rovData).encode('utf-8'), (ip, portnum))
