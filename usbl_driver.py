@@ -115,5 +115,6 @@ while True:
     rovData.lon = newLon
 
     #Send ROV data
-    print(rovData)
-    sockitOut.sendto(str(rovData).encode('utf-8'), (ip, portnum))
+    rovSentence = pynmea2.GGA('GP', 'GGA', rovData)
+    print(rovSentence)
+    #sockitOut.sendto(str(rovData).encode('utf-8'), (ip, portnum))
