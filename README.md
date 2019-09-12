@@ -1,5 +1,7 @@
 # BlueROV2_USBL
 
+Warning: This project is a WIP, and is highly cuztomized for my application. Its usefullness to others is likely very limited. 
+
 
 ## Setup
 
