@@ -54,19 +54,21 @@ def sendToMav(newLat, newLon):
     print(result)
     sockitOut.sendto(result.encode(), (ip, mavPort))
 
-def sendtoNMEARX(newLat, newLon):
+def sendtoNMEARX(newLatString, newLonString):
     gts = str(gpsData.timestamp)
     timestamp = float(gts[0:2] + gts[3:5] + gts[6:11])
     gds = str(gpsData.datestamp)
     datestamp = str(gds[8:10] + gds[5:7] + gds[2:4])
     #pdb.set_trace()
+
+    latString = newLat
     newMessage = pynmea2.RMC('GN', 'RMC',
         (
         str(timestamp),
         str(gpsData.status),
-        str(newLat*100)[0:10],
+        str(newLatString),
         str(gpsData.lat_dir),
-        str(newLon*100)[0:10],
+        str(newLonString),
         str(gpsData.lon_dir),
         str(gpsData.spd_over_grnd),
         str(""),
@@ -87,8 +89,16 @@ def sendtoNMEARX(newLat, newLon):
 #gpsData = pynmea2.parse("$GNGGA,191731.40,4458.18062,N,09331.05604,W,2,12,0.80,309.9,M,-30.7,M,,0000*75")
 #rthData = pynmea2.parse("$USRTH,20.0,-20.0,30.0,14.8,49.3,40.7,28.3,-0.3,1.7,29.5,60.5,72*51");
 
+def ddToDDM(dd):
+    is_positive = dd >= 0
+    dd = abs(dd)
+    degrees,minutes = divmod(dd*60,60)
+    degrees = degrees if is_positive else -degrees
+    return (degrees,minutes)
+
 while True:
     #Update Data
+    gotData = False
     try:
         with open('/dev/ttyUSB0', 'r') as dev:
             streamreader = pynmea2.NMEAStreamReader(dev)
@@ -99,24 +109,35 @@ while True:
             streamreader = pynmea2.NMEAStreamReader(dev)
             for msg in streamreader.next():
                 gpsData = msg
+
+        gotData = True
     except:
+
         print("Failed to read input")
+    if gotData:
+        #Maths
+        #Elevation 0 at horizon?
+        #pdb.set_trace()
+        hr = rthData.sr * math.cos(rthData.te)
 
-    #Maths
-    #Elevation 0 at horizon?
-    #pdb.set_trace()
-    hr = rthData.sr * math.cos(rthData.te)
+        dn = math.cos(rthData.cb) * hr
+        de = math.sin(rthData.cb) * hr
 
-    dn = math.cos(rthData.cb) * hr
-    de = math.sin(rthData.cb) * hr
+        dLat = dn / R
+        #pdb.set_trace()
 
-    dLat = dn / R
-    #pdb.set_trace()
+        dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
 
-    dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
+        newLat = abs(gpsData.latitude + dLat * 180 / math.pi)
+        newLon = abs(gpsData.longitude + dLon * 180 / math.pi)
 
-    newLat = abs(gpsData.latitude + dLat * 180 / math.pi)
-    newLon = abs(gpsData.longitude + dLon * 180 / math.pi)
+        newLatDegrees, newLatMinutes = ddToDDM(newLat)
+        newLonDegrees, newLonMinutes = ddToDDM(newLon)
 
-    #sendToMav(newLat, newLon)
-    sendtoNMEARX(newLat, newLon)
+        newLatString = format(newLatDegrees, '.0f') + format(newLatMinutes, '.5f')
+        newLonString = format(newLonDegrees, '.0f') + format(newLonMinutes, '.5f')
+
+        # pdb.set_trace()
+
+        #sendToMav(newLat, newLon)
+        sendtoNMEARX(newLatString, newLonString)
