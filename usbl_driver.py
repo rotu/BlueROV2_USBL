@@ -25,11 +25,11 @@ sockitOut.setblocking(False)
 R = float(6378137)
 
 #Samples
-#sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
-#sampleGPS = "$GPGGA,200838.400,3845.0630,N,07727.2770,W,1,06,1.2,111.4,M,-33.4,M,,0000*6A"
+# sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
+#sampleGPS = "$GNRMC,203637.00,A,4458.17333,N,09331.05019,W,0.606,,120919,,,A*70"
+#
 # rthData = pynmea2.parse(sampleRTH)
-# gpsData = pynmea2.parse(sampleGPS)
-# rovData = pynmea2.parse(sampleGPS)
+#gpsData = pynmea2.parse(sampleGPS)
 
 def sendtoNMEARX(newLatString, newLonString):
     gts = str(gpsData.timestamp)
@@ -39,7 +39,7 @@ def sendtoNMEARX(newLatString, newLonString):
     #pdb.set_trace()
 
     latString = newLat
-    newMessage = pynmea2.RMC('GN', 'RMC',
+    newData = pynmea2.RMC('GN', 'RMC',
         (
         str(timestamp),
         str(gpsData.status),
@@ -55,20 +55,20 @@ def sendtoNMEARX(newLatString, newLonString):
         )
     )
 
-    sendingMessage = gpsData
-    #sendingMessage = newMessage
+    sendingData = newData
+    sendingMessage = str(sendingData) + '\n'
 
     print("RTH: " , str(rthData))
     print("GPS: " , str(gpsData))
-    print("NEW: " , str(sendingMessage))
+    print("NEW: " , str(sendingData))
     print("-----------------------------------------------------")
 
     #Tests with data that actually works over socat
-    #sockitOut.sendto(b'$GNGGA,191732.20,4458.18069,N,09331.05618,W,2,12,0.80,310.1,M,-30.7,M,,0000*76', (ip, nmeaPort))
-    #sockitOut.sendto('$GNGGA,203637.00,4458.17333,N,09331.05019,W,1,07,1.74,298.5,M,-30.7,M,,*74', (ip, nmeaPort))
+    #sockitOut.sendto(b'$GNGGA,191732.20,4458.18069,N,09331.05618,W,2,12,0.80,310.1,M,-30.7,M,,0000*76\n', (ip, nmeaPort))
+    #sockitOut.sendto('$GNGGA,203637.00,4458.17333,N,09331.05019,W,1,07,1.74,298.5,M,-30.7,M,,*74\n', (ip, nmeaPort))
 
     #pdb.set_trace()
-    sockitOut.sendto(str(sendingMessage), (ip, nmeaPort))
+    sockitOut.sendto((sendingMessage.encode()), (ip, nmeaPort))
 
 def ddToDDM(dd):
     is_positive = dd >= 0
@@ -85,39 +85,42 @@ while True:
             streamreader = pynmea2.NMEAStreamReader(dev)
             for msg in streamreader.next():
                 rthData = msg
+                break
 
         with open('/dev/ttyACM0', 'r') as dev:
             streamreader = pynmea2.NMEAStreamReader(dev)
             for msg in streamreader.next():
-                gpsData = msg
+                if (msg.sentence_type == "RMC" or msg.sentence_type == "GGA"):
+                    gpsData = msg
+                    break
 
         gotData = True
-    except:
+    except Exception as e:
+        print("Failed to read input", e)
 
-        print("Failed to read input")
+
+    #gotData = True
     if gotData:
-
         #Maths
-        #compassBearing = (rthData.cb)
-        #slantRange = rthData.sr
-        #trueElevation = rthData.te
-
+        compassBearing = rthData.cb
+        slantRange = rthData.sr
+        trueElevation = rthData.te
 
         #Fake the RTH Data for now
-        compassBearing = 90
-        slantRange = 1000
-        trueElevation =-5
+        # compassBearing = 270
+        # slantRange = 100
+        # trueElevation =-10
 
         horizontalRange = slantRange * math.cos(math.radians(trueElevation))
 
-        dn = math.sin(math.radians(compassBearing)) * horizontalRange
-        de = math.cos(math.radians(compassBearing)) * horizontalRange
+        dn = math.cos(math.radians(compassBearing)) * horizontalRange
+        de = math.sin(math.radians(compassBearing)) * horizontalRange
 
         dLat = dn / R
         dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
 
         newLat = abs(gpsData.latitude + dLat * 180 / math.pi)
-        newLon = abs(gpsData.longitude + dLon * 180 / math.pi)
+        newLon = abs(gpsData.longitude - dLon * 180 / math.pi)
 
         newLatDegrees, newLatMinutes = ddToDDM(newLat)
         newLonDegrees, newLonMinutes = ddToDDM(newLon)
