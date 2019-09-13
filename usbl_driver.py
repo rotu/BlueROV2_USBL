@@ -24,35 +24,12 @@ sockitOut.setblocking(False)
 #Radius of Earth
 R = float(6378137)
 
-sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
-sampleGPS = "$GPGGA,200838.400,3845.0630,N,07727.2770,W,1,06,1.2,111.4,M,-33.4,M,,0000*6A"
+#Samples
+#sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
+#sampleGPS = "$GPGGA,200838.400,3845.0630,N,07727.2770,W,1,06,1.2,111.4,M,-33.4,M,,0000*6A"
 # rthData = pynmea2.parse(sampleRTH)
 # gpsData = pynmea2.parse(sampleGPS)
 # rovData = pynmea2.parse(sampleGPS)
-
-def sendToMav(newLat, newLon):
-    result = {}
-    result['time_usec'] = str(gpsData.timestamp)           #Timestamp (micros since boot or Unix epoch)
-    result['gps_id'] = 0                #ID of the GPS for multiple GPS inputs
-    result['ignore_flags'] = 1|2|4|8|16|32|64|128    #Flags indicating which fields to ignore (see GPS_INPUT_IGNORE_FLAGS enum). All other fields must be provided.
-    result['time_week_ms'] = 0          #GPS time (milliseconds from start of GPS week)
-    result['time_week'] = 0             #GPS week number
-    result['fix_type'] = 3              #0-1: no fix, 2: 2D fix, 3: 3D fix. 4: 3D with DGPS. 5: 3D with RTK
-    result['lat'] = 20*1e7                   #Latitude (WGS84), in degrees * 1E7
-    result['lon'] = 30                   #Longitude (WGS84), in degrees * 1E7
-    result['alt'] = 0                   #Altitude (AMSL, not WGS84), in m (positive for up)
-    result['hdop'] = 1                  #GPS HDOP horizontal dilution of position in m
-    result['vdop'] = 1                  #GPS VDOP vertical dilution of position in m
-    result['vn'] = 0                    #GPS velocity in m/s in NORTH direction in earth-fixed NED frame
-    result['ve'] = 0                    #GPS velocity in m/s in EAST direction in earth-fixed NED frame
-    result['vd'] = 0                    #GPS velocity in m/s in DOWN direction in earth-fixed NED frame
-    result['speed_accuracy'] = 0        #GPS speed accuracy in m/s
-    result['horiz_accuracy'] = 0        #GPS horizontal accuracy in m
-    result['vert_accuracy'] = 0         #GPS vertical accuracy in m
-    result['satellites_visible'] = 0    #Number of satellites visible.
-    result = json.dumps(result)
-    print(result)
-    sockitOut.sendto(result.encode(), (ip, mavPort))
 
 def sendtoNMEARX(newLatString, newLonString):
     gts = str(gpsData.timestamp)
@@ -74,20 +51,24 @@ def sendtoNMEARX(newLatString, newLonString):
         str(""),
         str(datestamp),
         str(gpsData.mag_variation),
-        str(gpsData.mag_var_dir)
+        str(gpsData.mag_var_dir),
         )
     )
-    print("G: " , str(gpsData))
-    print("N: " , str(newMessage))
+
+    sendingMessage = gpsData
+    #sendingMessage = newMessage
+
+    print("RTH: " , str(rthData))
+    print("GPS: " , str(gpsData))
+    print("NEW: " , str(sendingMessage))
+    print("-----------------------------------------------------")
+
+    #Tests with data that actually works over socat
     #sockitOut.sendto(b'$GNGGA,191732.20,4458.18069,N,09331.05618,W,2,12,0.80,310.1,M,-30.7,M,,0000*76', (ip, nmeaPort))
+    #sockitOut.sendto('$GNGGA,203637.00,4458.17333,N,09331.05019,W,1,07,1.74,298.5,M,-30.7,M,,*74', (ip, nmeaPort))
 
-    sockitOut.sendto(str(newMessage).encode(), (ip, nmeaPort))
-
-
-    #sockitOut.sendto(str(gpsData), (ip, nmeaPort))
-
-#gpsData = pynmea2.parse("$GNGGA,191731.40,4458.18062,N,09331.05604,W,2,12,0.80,309.9,M,-30.7,M,,0000*75")
-#rthData = pynmea2.parse("$USRTH,20.0,-20.0,30.0,14.8,49.3,40.7,28.3,-0.3,1.7,29.5,60.5,72*51");
+    #pdb.set_trace()
+    sockitOut.sendto(str(sendingMessage), (ip, nmeaPort))
 
 def ddToDDM(dd):
     is_positive = dd >= 0
@@ -115,17 +96,24 @@ while True:
 
         print("Failed to read input")
     if gotData:
-        #Maths
-        #Elevation 0 at horizon?
-        #pdb.set_trace()
-        hr = rthData.sr * math.cos(rthData.te)
 
-        dn = math.cos(rthData.cb) * hr
-        de = math.sin(rthData.cb) * hr
+        #Maths
+        #compassBearing = (rthData.cb)
+        #slantRange = rthData.sr
+        #trueElevation = rthData.te
+
+
+        #Fake the RTH Data for now
+        compassBearing = 90
+        slantRange = 1000
+        trueElevation =-5
+
+        horizontalRange = slantRange * math.cos(math.radians(trueElevation))
+
+        dn = math.sin(math.radians(compassBearing)) * horizontalRange
+        de = math.cos(math.radians(compassBearing)) * horizontalRange
 
         dLat = dn / R
-        #pdb.set_trace()
-
         dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
 
         newLat = abs(gpsData.latitude + dLat * 180 / math.pi)
@@ -136,8 +124,6 @@ while True:
 
         newLatString = format(newLatDegrees, '.0f') + format(newLatMinutes, '.5f')
         newLonString = format(newLonDegrees, '.0f') + format(newLonMinutes, '.5f')
+        #pdb.set_trace()
 
-        # pdb.set_trace()
-
-        #sendToMav(newLat, newLon)
         sendtoNMEARX(newLatString, newLonString)
