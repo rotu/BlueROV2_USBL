@@ -1,132 +1,96 @@
-#!/usr/bin/python
-import sys
-sys.path.insert(0, './pynmea2')
-
-import pdb
-
-import time
-import pynmea2
-import json
+#!/usr/bin/python3
 import socket
-import serial
-import math
-from decimal import *
-from os import system
+import time
+from math import cos, radians, sin
+from threading import Thread
+
+import pynmea2
+
+gps_stream = open('/dev/ttyACM0', 'rb')
+usbl_stream = open('/dev/ttyUSB0', 'rb')
 
 # destination / output
-ip="192.168.2.2"
-nmeaPort = 27000
-mavPort = 25100
-sockitOut = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sockitOut.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-sockitOut.setblocking(False)
+ip = "192.168.2.2"
+nmea_port = 27000
+mav_port = 25100
 
-#Radius of Earth
-R = float(6378137)
 
-#Samples
-# sampleRTH = "$USRTH,358.5,1.5,2.8,142.8,52.8,37.2,2.8,-0.6,1.9,178.1,271.9,16*49"
-#sampleGPS = "$GNRMC,203637.00,A,4458.17333,N,09331.05019,W,0.606,,120919,,,A*70"
-#
-# rthData = pynmea2.parse(sampleRTH)
-#gpsData = pynmea2.parse(sampleGPS)
-
-def sendtoNMEARX(newLatString, newLonString):
-    gts = str(gpsData.timestamp)
-    timestamp = float(gts[0:2] + gts[3:5] + gts[6:11])
-    gds = str(gpsData.datestamp)
-    datestamp = str(gds[8:10] + gds[5:7] + gds[2:4])
-    #pdb.set_trace()
-
-    latString = newLat
-    newData = pynmea2.RMC('GN', 'RMC',
-        (
-        str(timestamp),
-        str(gpsData.status),
-        str(newLatString),
-        str(gpsData.lat_dir),
-        str(newLonString),
-        str(gpsData.lon_dir),
-        str(gpsData.spd_over_grnd),
-        str(""),
-        str(datestamp),
-        str(gpsData.mag_variation),
-        str(gpsData.mag_var_dir),
-        )
+def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
+    """
+    converts signed fractional degrees to triple: is_positive, int_degrees, minutes
+    """
+    unsigned_degrees = abs(signed_degrees)
+    return (
+        signed_degrees >= 0,
+        int(unsigned_degrees),
+        unsigned_degrees % 60
     )
 
-    sendingData = newData
-    sendingMessage = str(sendingData) + '\n'
 
-    print("RTH: " , str(rthData))
-    print("GPS: " , str(gpsData))
-    print("NEW: " , str(sendingData))
-    print("-----------------------------------------------------")
-
-    #Tests with data that actually works over socat
-    #sockitOut.sendto(b'$GNGGA,191732.20,4458.18069,N,09331.05618,W,2,12,0.80,310.1,M,-30.7,M,,0000*76\n', (ip, nmeaPort))
-    #sockitOut.sendto('$GNGGA,203637.00,4458.17333,N,09331.05019,W,1,07,1.74,298.5,M,-30.7,M,,*74\n', (ip, nmeaPort))
-
-    #pdb.set_trace()
-    sockitOut.sendto((sendingMessage.encode()), (ip, nmeaPort))
-
-def ddToDDM(dd):
-    is_positive = dd >= 0
-    dd = abs(dd)
-    degrees,minutes = divmod(dd*60,60)
-    degrees = degrees if is_positive else -degrees
-    return (degrees,minutes)
-
-while True:
-    #Update Data
-    gotData = False
-    try:
-        with open('/dev/ttyUSB0', 'r') as dev:
-            streamreader = pynmea2.NMEAStreamReader(dev)
-            for msg in streamreader.next():
-                rthData = msg
-                break
-
-        with open('/dev/ttyACM0', 'r') as dev:
-            streamreader = pynmea2.NMEAStreamReader(dev)
-            for msg in streamreader.next():
-                if (msg.sentence_type == "RMC" or msg.sentence_type == "GGA"):
-                    gpsData = msg
-                    break
-
-        gotData = True
-    except Exception as e:
-        print("Failed to read input", e)
+def lat_long_per_meter(current_latitude_degrees):
+    """Returns the number of degrees per meter, in latitude and longitude"""
+    # based on https://en.wikipedia.org/wiki/Geographic_coordinate_system#Length_of_a_degree
+    phi = radians(current_latitude_degrees)
+    deg_lat_per_meter = 111132.92 - 559.82 * cos(2 * phi) + 1.175 * cos(4 * phi) - 0.0023 * cos(
+        6 * phi)
+    deg_long_per_meter = 111412.84 * cos(phi) - 93.5 * cos(3 * phi) + 0.118 * cos(5 * phi)
+    return deg_lat_per_meter, deg_long_per_meter
 
 
-    #gotData = True
-    if gotData:
-        #Maths
-        compassBearing = rthData.cb
-        slantRange = rthData.sr
-        trueElevation = rthData.te
+def combine_rmc_rth(rmc: pynmea2.RMC, rth: pynmea2.RTH) -> pynmea2.RMC:
+    compass_bearing = rth.cb
+    slant_range = rth.sr
+    true_elevation = rth.te
 
-        #Fake the RTH Data for now
-        # compassBearing = 270
-        # slantRange = 100
-        # trueElevation =-10
+    # Fake the RTH Data for now
+    # compassBearing = 270
+    # slantRange = 100
+    # trueElevation =-10
 
-        horizontalRange = slantRange * math.cos(math.radians(trueElevation))
+    horizontal_range = slant_range * cos(radians(true_elevation))
+    d_lat, d_lon = lat_long_per_meter(rmc.latitude)
+    new_lat = rmc.latitude + cos(radians(compass_bearing)) * horizontal_range * d_lat
+    new_lon = rmc.latitude + sin(radians(compass_bearing)) * horizontal_range * d_lon
+    lat_sgn, lat_deg, lat_min = degrees_to_sdm(new_lat)
+    lon_sgn, lon_deg, lon_min = degrees_to_sdm(new_lon)
+    new_rmc_data = [
+        *rmc.data[:2],
+        f'{lat_deg:02d}{lat_min:.5f}',
+        {True: 'N', False: 'S'}[lat_sgn],
+        f'{lon_deg:02d}{lon_min:.5f}',
+        {True: 'E', False: 'W'}[lon_sgn],
+        '',
+        '',
+        *rmc.data[8:]
+    ]
+    return pynmea2.RMC('GN', 'RMC', new_rmc_data)
 
-        dn = math.cos(math.radians(compassBearing)) * horizontalRange
-        de = math.sin(math.radians(compassBearing)) * horizontalRange
 
-        dLat = dn / R
-        dLon = de / (R * math.cos(math.pi) * gpsData.latitude / float(100))
+def main():
+    rmc = None
+    out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    out_udp.setblocking(False)
 
-        newLat = abs(gpsData.latitude + dLat * 180 / math.pi)
-        newLon = abs(gpsData.longitude - dLon * 180 / math.pi)
+    def get_latest_rmc():
+        nonlocal rmc
+        with gps_stream:
+            while True:
+                for msg in pynmea2.NMEAStreamReader(gps_stream):
+                    if msg.sentence_type == 'RMC':
+                        rmc = msg
 
-        newLatDegrees, newLatMinutes = ddToDDM(newLat)
-        newLonDegrees, newLonMinutes = ddToDDM(newLon)
+    gps_thread = Thread(target=get_latest_rmc)
+    gps_thread.start()
 
-        newLatString = format(newLatDegrees, '.0f') + format(newLatMinutes, '.5f')
-        newLonString = format(newLonDegrees, '.0f') + format(newLonMinutes, '.5f')
-        #pdb.set_trace()
+    while rmc is None:
+        print('waiting for initial GPS data...')
+        time.sleep(1)
 
-        sendtoNMEARX(newLatString, newLonString)
+    with usbl_stream:
+        for rth in pynmea2.NMEAStreamReader(usbl_stream):
+            assert isinstance(rth, pynmea2.RTH)
+            assert isinstance(rmc, pynmea2.RMC)
+
+            new_rmc = combine_rmc_rth(rmc, rth)
+            out_udp.sendto(new_rmc.encode(), (ip, nmea_port))
