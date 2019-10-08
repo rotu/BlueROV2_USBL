@@ -1,14 +1,15 @@
 #!/usr/bin/python3
+
 import logging
 import socket
 import time
 from enum import Enum
 from math import cos, radians, sin
 from threading import Thread
-from typing import BinaryIO, Callable, IO, Mapping, Optional, Tuple, Any
+from typing import Any, BinaryIO, Callable, IO, Optional, Tuple
 
-import pynmea2
-from pynmea2 import RMC
+import serial
+from pynmea2 import NMEAStreamReader, RMC, RTH
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
@@ -33,7 +34,7 @@ def lat_long_per_meter(current_latitude_degrees):
     return deg_lat_per_meter, deg_long_per_meter
 
 
-def combine_rmc_rth(rmc: pynmea2.RMC, rth: pynmea2.RTH) -> pynmea2.RMC:
+def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
     compass_bearing = rth.cb
     slant_range = rth.sr
     true_elevation = rth.te
@@ -59,7 +60,7 @@ def combine_rmc_rth(rmc: pynmea2.RMC, rth: pynmea2.RTH) -> pynmea2.RMC:
         '',
         *rmc.data[8:]
     ]
-    return pynmea2.RMC('GN', 'RMC', new_rmc_data)
+    return RMC('GN', 'RMC', new_rmc_data)
 
 
 class Device(Enum):
@@ -67,12 +68,6 @@ class Device(Enum):
     USBL = 'usbl'
     ECHO = 'echo'
     MAV = 'mav'
-
-
-class DeviceState:
-    def __init__(self, addr: str, is_connected: bool):
-        self.addr = addr
-        self.is_connected = is_connected
 
 
 def get_device_name_if_open(file_obj: Optional[IO]):
@@ -162,7 +157,8 @@ class USBLController:
                 return
             if self._dev_usbl is not None:
                 self._dev_usbl.close()
-            self._dev_usbl = open(value, 'rb')
+
+            self._dev_usbl = serial.Serial(value, baudrate=115200, exclusive=True)
         finally:
             self._state_change_cb('dev_usbl', self.dev_usbl)
 
@@ -172,7 +168,7 @@ class USBLController:
                 time.sleep(0.1)
                 continue
             try:
-                for msg in pynmea2.NMEAStreamReader(self._dev_gps):
+                for msg in NMEAStreamReader(self._dev_gps).next():
                     if msg.sentence_type == 'RMC':
                         self._last_rmc = msg
 
@@ -191,7 +187,7 @@ class USBLController:
                 time.sleep(0.1)
                 continue
             try:
-                for rth in pynmea2.NMEAStreamReader(self._dev_usbl):
+                for rth in NMEAStreamReader(self._dev_usbl).next():
                     if rth.sentence_type != 'RTH':
                         continue
 

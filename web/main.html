@@ -7,9 +7,30 @@
         input:invalid {
             color: red;
         }
-        option[value=''] {
-            color:maroon;
+
+        li.error::before {
+            content: "! "
         }
+        li.error {
+            list-style: none;
+            color: darkred;
+        }
+
+        li.warning::before {
+            content: "? "
+        }
+        li.warning {
+            list-style: none;
+            color: darkgoldenrod;
+        }
+
+        li.info::before {
+            content: "… "
+        }
+        li.info {
+            list-style: none;
+        }
+
     </style>
 </head>
 <table>

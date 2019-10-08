@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import logging
 
 import eel
@@ -13,7 +15,7 @@ logger.setLevel(logging.INFO)
 class AppLoggingHandler(logging.Handler):
     def emit(self, record: logging.LogRecord):
         try:
-            eel.add_to_log(record.msg)
+            eel.add_to_log(record.levelname.lower(), record.msg)
         except AttributeError:
             pass
 
@@ -35,7 +37,6 @@ def controller_set_attr(k, v):
         setattr(usbl_controller, k, v)
     except Exception as e:
         logger.error(f"Failed to set {k} to {v}: {e}")
-        raise
 
 
 def poll_usb_devices_thread():
@@ -45,14 +46,12 @@ def poll_usb_devices_thread():
             for cp in list_ports.comports():
                 port_names.append(cp.device)
             port_names.append('/dev/debug')
-            eel.on_list_usb_devices(port_names)
+            eel.on_list_usb_devices(sorted(port_names))
         except Exception as e:
             print(e)
         eel.sleep(3.0)
 
 
 eel.expose(controller_set_attr)
-
 eel.spawn(poll_usb_devices_thread)
 eel.start('main.html')
-print('eel loop ended')

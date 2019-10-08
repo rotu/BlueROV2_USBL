@@ -21,11 +21,17 @@ window.addEventListener('load', (event) => {
     on_echo_change()
     els.echo_ok.addEventListener('change', on_echo_change);
     els.input_echo.addEventListener('change', on_echo_change);
+
+    eel._websocket.addEventListener('close', () => {
+        debugger;
+        window.close()
+    })
 });
 
 eel.expose(on_list_usb_devices);
 eel.expose(add_to_log);
 eel.expose(on_controller_attr_changed);
+
 
 function on_controller_attr_changed(key, value) {
     switch (key) {
@@ -97,9 +103,10 @@ function on_mav_change() {
 }
 
 
-function add_to_log(contents) {
+function add_to_log(level, msg) {
     let li = document.createElement('li');
-    li.innerText = contents;
+    li.className = level;
+    li.innerText = msg;
     document.getElementById('event_log').appendChild(li);
 }
 
@@ -108,17 +115,37 @@ function on_list_usb_devices(devices) {
     let sel_dev_gps = document.getElementById('sel_dev_gps');
 
     for (let sel of [sel_dev_usbl, sel_dev_gps]) {
-        let value = sel.value;
-        for (let i = sel.options.length - 1; i >= 1; i--) {
-            sel.options.remove(i)
+        let opts_to_remove = [];
+        for (let opt of sel.options) {
+            if (opt.value === '')
+                continue;
+            if (devices.indexOf(opt.value) !== -1)
+                continue;
+            if (opt.selected) {
+                opt.disable = true;
+                continue;
+            }
+            opts_to_remove.push(opt)
         }
+        for (let opt of opts_to_remove) {
+            opt.remove();
+        }
+
+        let new_devices = [];
+        for (let opt of sel.options) {
+            new_devices.push(opt.value)
+        }
+
         for (let device of devices) {
+            if (new_devices.indexOf(device) !== -1)
+                continue;
+
             let opt = document.createElement('option');
             opt.appendChild(document.createTextNode(device));
             opt.value = device;
             sel.appendChild(opt)
         }
-        sel.value = value;
+        //sel.value = value;
     }
 }
 
