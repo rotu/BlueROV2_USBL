@@ -2,3 +2,4 @@
 pyserial
 pyinstaller
 eel
+pywebview[qt,cef]

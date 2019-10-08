@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-
 import logging
+from threading import Thread
 
 import eel
+import webview
 from serial.tools import list_ports
 
 from usbl_driver import USBLController
@@ -33,13 +34,14 @@ usbl_controller = USBLController(change_observer)
 
 
 def controller_set_attr(k, v):
+    logger.info(f'setting attr {k}={v}')
     try:
         setattr(usbl_controller, k, v)
     except Exception as e:
         logger.error(f"Failed to set {k} to {v}: {e}")
 
 
-def poll_usb_devices_thread():
+def get_serial_devices():
     while True:
         port_names = []
         try:
@@ -48,10 +50,17 @@ def poll_usb_devices_thread():
             port_names.append('/dev/debug')
             eel.on_list_usb_devices(sorted(port_names))
         except Exception as e:
-            print(e)
-        eel.sleep(3.0)
+            logger.error(e)
 
 
 eel.expose(controller_set_attr)
-eel.spawn(poll_usb_devices_thread)
-eel.start('main.html')
+eel.expose(get_serial_devices)
+
+webview.create_window('USBL controller', 'http://localhost:8000/main.html')
+eel.start(options={'host': 'localhost', 'port': 8000,
+    'mode': None},block=False)
+# eel_thread = Thread(target=eelambda)
+# eel_thread.start()
+
+webview.start(gui='qt')
+# eel_thread.join()

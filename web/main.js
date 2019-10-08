@@ -5,7 +5,14 @@ window.addEventListener('load', (event) => {
     for (let e of document.querySelectorAll('[id]')) {
         els[e.id] = e;
     }
+    eel.get_serial_devices()().then(on_list_usb_devices)
+    window.setInterval(() => {
+        eel.get_serial_devices()().then(on_list_usb_devices)
+    }, 5000);
 
+    window.addEventListener('error', (ev) => {
+        add_to_log('error', 'javascript error' + ev.error)
+    })
     on_gps_change()
     els.gps_ok.addEventListener('change', on_gps_change);
     els.sel_dev_gps.addEventListener('change', on_gps_change);
@@ -22,16 +29,11 @@ window.addEventListener('load', (event) => {
     els.echo_ok.addEventListener('change', on_echo_change);
     els.input_echo.addEventListener('change', on_echo_change);
 
-    eel._websocket.addEventListener('close', () => {
-        debugger;
-        window.close()
-    })
 });
 
 eel.expose(on_list_usb_devices);
 eel.expose(add_to_log);
 eel.expose(on_controller_attr_changed);
-
 
 function on_controller_attr_changed(key, value) {
     switch (key) {
@@ -64,12 +66,11 @@ function on_controller_attr_changed(key, value) {
 
 function on_gps_change() {
     els.gps_ok.disabled = !els.sel_dev_gps.value;
-
     let dev = null;
     if (els.gps_ok.checked) {
         dev = els.sel_dev_gps.value || null;
     }
-    eel.controller_set_attr('dev_gps', dev)();
+    x = eel.controller_set_attr('dev_gps', dev)();
 }
 
 function on_usbl_change() {
@@ -101,7 +102,6 @@ function on_mav_change() {
     }
     eel.controller_set_attr('addr_mav', addr)();
 }
-
 
 function add_to_log(level, msg) {
     let li = document.createElement('li');
