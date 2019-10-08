@@ -1,7 +1,6 @@
 <html>
 <head>
     <title>USBL Relay</title>
-    <script type="text/javascript" src="/eel.js"></script>
     <script src="main.js"></script>
     <style>
         input:invalid {
@@ -11,6 +10,7 @@
         li.error::before {
             content: "! "
         }
+
         li.error {
             list-style: none;
             color: darkred;
@@ -19,20 +19,22 @@
         li.warning::before {
             content: "? "
         }
+
         li.warning {
             list-style: none;
             color: darkgoldenrod;
         }
 
         li.info::before {
-            content: "… "
+            content: "\2026 "
         }
+
         li.info {
             list-style: none;
         }
-
     </style>
 </head>
+<h2>devices</h2>
 <table>
     <tr>
         <td><label>GPS device</label></td>
@@ -59,8 +61,7 @@
         <td><input id='mav_ok' type="checkbox" checked="checked"></td>
     </tr>
 </table>
-<fieldset>
-    <legend>Event log:</legend>
-    <ul id="event_log"></ul>
-</fieldset>
+<hr />
+<h2>events</h2>
+<ul id="event_log"></ul>
 </html>

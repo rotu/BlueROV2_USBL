@@ -1,48 +1,57 @@
 // Elements by id
 els = {};
+window.addEventListener('error', (ev) => {
+    add_to_log('error', 'javascript error: ' + ev.message + ' at ' + ev.filename + ":" + ev.lineno)
+});
+
+let api = null;
+
+function init_api() {
+    if (typeof pywebview === 'undefined') {
+        window.setTimeout(init_api, 10);
+        return;
+    }
+    api = pywebview.api;
+
+    api.get_serial_devices().then(on_list_usb_devices);
+
+    window.setInterval(() => {
+        api.get_serial_devices().then(on_list_usb_devices);
+    }, 5000);
+
+    on_gps_change();
+    els.gps_ok.addEventListener('change', on_gps_change);
+    els.sel_dev_gps.addEventListener('change', on_gps_change);
+
+    on_usbl_change();
+    els.usbl_ok.addEventListener('change', on_usbl_change);
+    els.sel_dev_usbl.addEventListener('change', on_usbl_change);
+
+    on_mav_change();
+    els.mav_ok.addEventListener('change', on_mav_change);
+    els.input_mav.addEventListener('change', on_mav_change);
+
+    on_echo_change();
+    els.echo_ok.addEventListener('change', on_echo_change);
+    els.input_echo.addEventListener('change', on_echo_change);
+}
 
 window.addEventListener('load', (event) => {
     for (let e of document.querySelectorAll('[id]')) {
         els[e.id] = e;
     }
-    eel.get_serial_devices()().then(on_list_usb_devices)
-    window.setInterval(() => {
-        eel.get_serial_devices()().then(on_list_usb_devices)
-    }, 5000);
-
-    window.addEventListener('error', (ev) => {
-        add_to_log('error', 'javascript error' + ev.error)
-    })
-    on_gps_change()
-    els.gps_ok.addEventListener('change', on_gps_change);
-    els.sel_dev_gps.addEventListener('change', on_gps_change);
-
-    on_usbl_change()
-    els.usbl_ok.addEventListener('change', on_usbl_change);
-    els.sel_dev_usbl.addEventListener('change', on_usbl_change);
-
-    on_mav_change()
-    els.mav_ok.addEventListener('change', on_mav_change);
-    els.input_mav.addEventListener('change', on_mav_change);
-
-    on_echo_change()
-    els.echo_ok.addEventListener('change', on_echo_change);
-    els.input_echo.addEventListener('change', on_echo_change);
-
+    init_api();
 });
 
-eel.expose(on_list_usb_devices);
-eel.expose(add_to_log);
-eel.expose(on_controller_attr_changed);
-
 function on_controller_attr_changed(key, value) {
+    add_to_log('info', key + ' is now ' + value);
+
     switch (key) {
         case 'dev_usbl':
             if (value) {
                 els.sel_dev_usbl.value = value;
             }
             els.usbl_ok.checked = !!value;
-
             break;
         case 'dev_gps':
             if (value) {
@@ -70,7 +79,14 @@ function on_gps_change() {
     if (els.gps_ok.checked) {
         dev = els.sel_dev_gps.value || null;
     }
-    x = eel.controller_set_attr('dev_gps', dev)();
+        add_to_log('debug', 'requested: '+dev)
+    api.controller_set_attr({'dev_gps': dev}).then(
+        (x) => {
+            add_to_log('debug', 'got: '+dev)
+            add_to_log('debug',!!x)
+
+            els.gps_ok.checked = !!x;
+        });
 }
 
 function on_usbl_change() {
@@ -80,7 +96,7 @@ function on_usbl_change() {
     if (els.usbl_ok.checked) {
         dev = els.sel_dev_usbl.value || null;
     }
-    eel.controller_set_attr('dev_usbl', dev)();
+    window.pr = api.controller_set_attr({'dev_usbl': dev});
 }
 
 function on_echo_change() {
@@ -90,7 +106,7 @@ function on_echo_change() {
     if (els.echo_ok.checked) {
         addr = els.input_echo.value || null;
     }
-    eel.controller_set_attr('addr_echo', addr)();
+    api.controller_set_attr({'addr_echo': addr});
 }
 
 function on_mav_change() {
@@ -100,14 +116,14 @@ function on_mav_change() {
     if (els.mav_ok.checked) {
         addr = els.input_mav.value || null;
     }
-    eel.controller_set_attr('addr_mav', addr)();
+    api.controller_set_attr({'addr_mav': addr});
 }
 
 function add_to_log(level, msg) {
     let li = document.createElement('li');
     li.className = level;
     li.innerText = msg;
-    document.getElementById('event_log').appendChild(li);
+    document.getElementById('event_log').prepend(li);
 }
 
 function on_list_usb_devices(devices) {

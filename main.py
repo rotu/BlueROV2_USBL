@@ -1,66 +1,80 @@
 #!/usr/bin/python3
+import json
 import logging
-from threading import Thread
+from functools import wraps
 
-import eel
 import webview
 from serial.tools import list_ports
 
 from usbl_driver import USBLController
 
-eel.init('web')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+usbl_controller = USBLController()
+
+
+class Api:
+    def controller_set_attr(self, obj):
+        (attr, value), = obj.items()
+        print(f'setting {attr}={value}')
+
+        try:
+            setattr(usbl_controller, attr, value)
+        except Exception as e:
+            print(str(e))
+            # logger.error(str(e))
+        return getattr(usbl_controller,attr)
+        # on_controller_attr_changed(attr,value)
+
+    def get_serial_devices(self, obj):
+        try:
+            result = [cp.device for cp in list_ports.comports()]
+            result.append('/dev/debug')
+            return result
+        except Exception as e:
+            add_to_log('error', str(e))
+
+
+window = webview.create_window('USBL controller', url='web/main.html', js_api=Api())
+
+
+def js_function(stub: callable):
+    """Decorator for a function whose implementation actually lives in Python"""
+
+    @wraps(stub)
+    def wrapper(*args, **kwargs):
+        assert not args or not kwargs
+        if kwargs:
+            argstr = json.dumps(kwargs)
+        else:
+            argstr = ','.join(json.dumps(a) for a in args)
+        snippet = f'{stub.__name__}({argstr})'
+        return window.evaluate_js(snippet)
+
+    return wrapper
+
+
+@js_function
+def add_to_log(severity, message): ...
+
+
+@js_function
+def on_controller_attr_changed(attr, value): ...
+
+
+@js_function
+def on_list_usb_devices(values): ...
 
 
 class AppLoggingHandler(logging.Handler):
     def emit(self, record: logging.LogRecord):
-        try:
-            eel.add_to_log(record.levelname.lower(), record.msg)
-        except AttributeError:
-            pass
+        add_to_log(record.levelname.lower(), record.msg)
 
 
 my_handler = AppLoggingHandler()
 logger.addHandler(my_handler)
 
+usbl_controller.set_change_callback(on_controller_attr_changed)
 
-# wrap since this callback is not yet ready.
-def change_observer(*args, **kwargs):
-    eel.on_controller_attr_changed(*args, **kwargs)
-
-
-usbl_controller = USBLController(change_observer)
-
-
-def controller_set_attr(k, v):
-    logger.info(f'setting attr {k}={v}')
-    try:
-        setattr(usbl_controller, k, v)
-    except Exception as e:
-        logger.error(f"Failed to set {k} to {v}: {e}")
-
-
-def get_serial_devices():
-    while True:
-        port_names = []
-        try:
-            for cp in list_ports.comports():
-                port_names.append(cp.device)
-            port_names.append('/dev/debug')
-            eel.on_list_usb_devices(sorted(port_names))
-        except Exception as e:
-            logger.error(e)
-
-
-eel.expose(controller_set_attr)
-eel.expose(get_serial_devices)
-
-webview.create_window('USBL controller', 'http://localhost:8000/main.html')
-eel.start(options={'host': 'localhost', 'port': 8000,
-    'mode': None},block=False)
-# eel_thread = Thread(target=eelambda)
-# eel_thread.start()
-
-webview.start(gui='qt')
-# eel_thread.join()
+webview.start(http_server=True, debug=True)
