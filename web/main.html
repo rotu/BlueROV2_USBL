@@ -1,0 +1,45 @@
+<html>
+<head>
+    <title>USBL Relay</title>
+    <script type="text/javascript" src="/eel.js"></script>
+    <script src="main.js"></script>
+    <style>
+        input:invalid {
+            color: red;
+        }
+        option[value=''] {
+            color:maroon;
+        }
+    </style>
+</head>
+<table>
+    <tr>
+        <td><label>GPS device</label></td>
+        <td><select id='sel_dev_gps'>
+            <option value="">None Selected</option>
+        </select></td>
+        <td><input id='gps_ok' type="checkbox"></td>
+    </tr>
+    <tr>
+        <td><label>USBL device</label></td>
+        <td><select id='sel_dev_usbl'>
+            <option value="">None Selected</option>
+        </select></td>
+        <td><input id='usbl_ok' type="checkbox"></td>
+    </tr>
+    <tr>
+        <td><label>GPS echo address</label></td>
+        <td><input id='input_echo' placeholder="host:port" required pattern="\S*:\d+" value="localhost:27000"/></td>
+        <td><input id='echo_ok' type="checkbox" checked="checked"></td>
+    </tr>
+    <tr>
+        <td><label>MAV address</label></td>
+        <td><input id='input_mav' placeholder="host:port" required pattern="\S*:\d+" value="192.168.2.2:25100"/></td>
+        <td><input id='mav_ok' type="checkbox" checked="checked"></td>
+    </tr>
+</table>
+<fieldset>
+    <legend>Event log:</legend>
+    <ul id="event_log"></ul>
+</fieldset>
+</html>
