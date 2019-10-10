@@ -79,14 +79,7 @@ function on_gps_change() {
     if (els.gps_ok.checked) {
         dev = els.sel_dev_gps.value || null;
     }
-        add_to_log('debug', 'requested: '+dev)
-    api.controller_set_attr({'dev_gps': dev}).then(
-        (x) => {
-            add_to_log('debug', 'got: '+dev)
-            add_to_log('debug',!!x)
-
-            els.gps_ok.checked = !!x;
-        });
+    api.controller_set_attr({'dev_gps': dev})
 }
 
 function on_usbl_change() {

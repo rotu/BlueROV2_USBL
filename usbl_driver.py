@@ -2,16 +2,15 @@
 
 import logging
 import socket
-import time
+from concurrent.futures.thread import ThreadPoolExecutor
 from enum import Enum
-from io import TextIOWrapper
 from math import cos, radians, sin
-from textwrap import TextWrapper
-from threading import Thread
-from typing import Any, BinaryIO, Callable, IO, Optional, Tuple, TextIO
+from threading import Event
+from typing import Any, Callable, Optional, Tuple
 
 import serial
-from pynmea2 import NMEAStreamReader, RMC, RTH
+from pynmea2 import NMEASentence, RMC, RTH
+from serial import Serial
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
@@ -41,11 +40,6 @@ def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
     slant_range = rth.sr
     true_elevation = rth.te
 
-    # Fake the RTH Data for now
-    # compassBearing = 270
-    # slantRange = 100
-    # trueElevation =-10
-
     horizontal_range = slant_range * cos(radians(true_elevation))
     d_lat, d_lon = lat_long_per_meter(rmc.latitude)
     new_lat = rmc.latitude + cos(radians(compass_bearing)) * horizontal_range * d_lat
@@ -72,23 +66,26 @@ class Device(Enum):
     MAV = 'mav'
 
 
-def get_device_name_if_open(file_obj: Optional[IO]):
+def get_device_name_if_open(file_obj: Optional[Serial]):
     if file_obj is None:
         return None
-    if file_obj.closed:
+    if not file_obj.is_open:
         return None
     return file_obj.name
 
 
-class USBLController:
-    _thread_gps: Optional[Thread] = None
-    _thread_usbl: Optional[Thread] = None
+executor = ThreadPoolExecutor()
 
+
+class USBLController:
     _addr_echo: Optional[Tuple[str, int]] = None
     _addr_mav: Optional[Tuple[str, int]] = None
 
-    _dev_gps: Optional[TextIO] = None
-    _dev_usbl: Optional[TextIO] = None
+    _dev_gps: Optional[Serial] = None
+    _dev_usbl: Optional[Serial] = None
+
+    _close_gps_event: Event
+    _close_usbl_event: Event
 
     _last_rmc: Optional[RMC] = None
     _state_change_cb: Callable[[str, Any], None]
@@ -100,11 +97,11 @@ class USBLController:
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._out_udp.setblocking(False)
-        self._thread_gps = Thread(target=self._gps_reader_thread)
-        self._thread_gps.start()
-        self._thread_usbl = Thread(target=self._usbl_reader_thread)
-        self._thread_usbl.start()
+
         self._state_change_cb = lambda key, value: None
+
+        self._close_gps_event = Event()
+        self._close_usbl_event = Event()
 
     @property
     def addr_echo(self):
@@ -136,12 +133,13 @@ class USBLController:
 
     @dev_gps.setter
     def dev_gps(self, value):
-        if value == self.dev_gps:
-            return
         if self._dev_gps is not None:
+            self._close_gps_event.set()
             self._dev_gps.close()
         if value is not None:
-            self._dev_gps = open(value, 'r', encoding='ascii', newline='\r\n')
+            self._close_gps_event = new_close_event = Event()
+            self._dev_gps = serial.Serial(value)
+            executor.submit(self._read_gps_until_close_requested, new_close_event)
 
     @property
     def dev_usbl(self):
@@ -149,61 +147,54 @@ class USBLController:
 
     @dev_usbl.setter
     def dev_usbl(self, value):
-        if value == self.dev_gps:
-            return
         if self._dev_usbl is not None:
+            self._close_usbl_event.set()
             self._dev_usbl.close()
         if value is not None:
-            ser = serial.Serial(value, baudrate=115200, exclusive=True, )
-            self._dev_usbl = TextIOWrapper(ser, 'ascii', newline='\r\n')
+            self._close_usbl_event = new_close_event = Event()
+            self._dev_usbl = serial.Serial(value, baudrate=115200, exclusive=True,
+                inter_byte_timeout=0.1)
+            executor.submit(self._read_usbl_until_close_requested, new_close_event)
 
-    def _gps_reader_thread(self):
-        while True:
-            if self.dev_gps is None:
-                time.sleep(0.1)
-                continue
-            try:
-                for batch in NMEAStreamReader(self._dev_gps):
-                    for msg in batch:
-                        if msg.sentence_type == 'RMC':
-                            self._last_rmc = msg
+    def _read_gps_until_close_requested(self, close_event):
+        try:
+            with self._dev_gps:
 
-                        addr_echo = self._addr_echo
-                        if addr_echo is not None:
-                            self._out_udp.sendto(msg.encode(), addr_echo)
+                while True:
+                    line = self._dev_gps.readline()
+                    msg = NMEASentence.parse(line)
+                    if msg.sentence_type == 'RMC':
+                        self._last_rmc = msg
 
-            except Exception as e:
+                    addr_echo = self._addr_echo
+                    if addr_echo is not None:
+                        self._out_udp.sendto(msg.encode(), addr_echo)
+        except Exception as e:
+            if not close_event.is_set():
                 logging.error(f'GPS Reader Thread: {e}')
-            finally:
-                self.dev_gps = None
-                self._state_change_cb('dev_gps',None)
+                self._state_change_cb('dev_gps', self.dev_gps)
 
-    def _usbl_reader_thread(self):
-        while True:
-            if self.dev_usbl is None:
-                time.sleep(0.1)
-                continue
-            try:
-                for batch in NMEAStreamReader(self._dev_gps):
-                    for rth in batch:
-                        if rth.sentence_type != 'RTH':
-                            continue
+    def _read_usbl_until_close_requested(self, close_event):
+        try:
+            with self._dev_usbl:
+                while True:
+                    ln = self._dev_usbl.readline()
+                    rth = NMEASentence.parse(ln)
+                    if rth.sentence_type != 'RTH':
+                        continue
 
-                        rmc = self._last_rmc
-                        if rmc is None:
-                            logging.info('ignoring RTH message because RMC is not ready yet')
-                            continue
+                    rmc = self._last_rmc
+                    if rmc is None:
+                        logging.info('ignoring RTH message because RMC is not ready yet')
+                        continue
 
-                        addr_mav = self._addr_mav
-                        if addr_mav is None:
-                            continue
+                    addr_mav = self._addr_mav
+                    if addr_mav is None:
+                        continue
 
-                        new_rmc = combine_rmc_rth(rmc, rth)
-                        self._out_udp.sendto(new_rmc.encode(), addr_mav)
-
-            except Exception as e:
+                    new_rmc = combine_rmc_rth(rmc, rth)
+                    self._out_udp.sendto(new_rmc.encode(), addr_mav)
+        except Exception as e:
+            if not close_event.is_set():
                 logging.error(f'USBL Reader Thread: {e}')
-            finally:
-                self.dev_usbl = None
-                self._state_change_cb('dev_usbl',None)
-
+                self._state_change_cb('dev_usbl', self.dev_usbl)

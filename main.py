@@ -22,12 +22,15 @@ class Api:
         try:
             setattr(usbl_controller, attr, value)
         except Exception as e:
-            print(str(e))
-            # logger.error(str(e))
-        return getattr(usbl_controller,attr)
-        # on_controller_attr_changed(attr,value)
+            logger.error(str(e))
 
-    def get_serial_devices(self, obj):
+        new_value = getattr(usbl_controller, attr)
+        on_controller_attr_changed(attr, new_value)
+
+        ## in pywebview, return values from Python don't work reliably
+        # return getattr(usbl_controller, attr)
+
+    def get_serial_devices(self, *arg, **kwargs):
         try:
             result = [cp.device for cp in list_ports.comports()]
             result.append('/dev/debug')
