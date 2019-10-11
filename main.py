@@ -24,9 +24,6 @@ class Api:
         except Exception as e:
             logger.error(str(e))
 
-        new_value = getattr(usbl_controller, attr)
-        on_controller_attr_changed(attr, new_value)
-
         ## in pywebview, return values from Python don't work reliably
         # return getattr(usbl_controller, attr)
 
