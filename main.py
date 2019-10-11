@@ -8,9 +8,6 @@ from serial.tools import list_ports
 
 from usbl_driver import USBLController
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 usbl_controller = USBLController()
 
 
@@ -19,13 +16,7 @@ class Api:
         (attr, value), = obj.items()
         print(f'setting {attr}={value}')
 
-        try:
-            setattr(usbl_controller, attr, value)
-        except Exception as e:
-            logger.error(str(e))
-
-        new_value = getattr(usbl_controller, attr)
-        on_controller_attr_changed(attr, new_value)
+        setattr(usbl_controller, attr, value)
 
         ## in pywebview, return values from Python don't work reliably
         # return getattr(usbl_controller, attr)
@@ -36,10 +27,10 @@ class Api:
             result.append('/dev/debug')
             return result
         except Exception as e:
-            add_to_log('error', str(e))
+            logging.error(str(e))
 
 
-window = webview.create_window('USBL controller', url='web/main.html', js_api=Api())
+window = webview.create_window('USBL Relay', url='web/main.html', js_api=Api())
 
 
 def js_function(stub: callable):
@@ -59,7 +50,7 @@ def js_function(stub: callable):
 
 
 @js_function
-def add_to_log(severity, message): ...
+def log_json(record): ...
 
 
 @js_function
@@ -72,11 +63,18 @@ def on_list_usb_devices(values): ...
 
 class AppLoggingHandler(logging.Handler):
     def emit(self, record: logging.LogRecord):
-        add_to_log(record.levelname.lower(), record.msg)
+        log_json({k: getattr(record, k) for k in
+            ('filename', 'funcName', 'levelname', 'lineno', 'module', 'msg', 'name')})
 
 
+logging.getLogger().setLevel(logging.INFO)
 my_handler = AppLoggingHandler()
-logger.addHandler(my_handler)
+my_handler.setFormatter('[%(name)s] %(message)s')
+logging.getLogger().addHandler(my_handler)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter(
+    '%(asctime)s:[%(name)s] - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(stream_handler)
 
 usbl_controller.set_change_callback(on_controller_attr_changed)
 

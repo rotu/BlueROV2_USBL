@@ -2,6 +2,7 @@
 
 import logging
 import socket
+from concurrent.futures._base import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from enum import Enum
 from math import cos, radians, sin
@@ -9,7 +10,7 @@ from threading import Event
 from typing import Any, Callable, Optional, Tuple
 
 import serial
-from pynmea2 import NMEASentence, RMC, RTH
+from pynmea2 import NMEASentence, RMC, RTH, ParseError
 from serial import Serial
 
 
@@ -74,7 +75,7 @@ def get_device_name_if_open(file_obj: Optional[Serial]):
     return file_obj.name
 
 
-executor = ThreadPoolExecutor()
+executor = ThreadPoolExecutor(3)
 
 
 class USBLController:
@@ -84,8 +85,11 @@ class USBLController:
     _dev_gps: Optional[Serial] = None
     _dev_usbl: Optional[Serial] = None
 
-    _close_gps_event: Event
-    _close_usbl_event: Event
+    _gps_closing: bool
+    _gps_worker: Optional[Future] = None
+
+    _usbl_closing: bool
+    _usbl_worker: Future = None
 
     _last_rmc: Optional[RMC] = None
     _state_change_cb: Callable[[str, Any], None]
@@ -93,15 +97,14 @@ class USBLController:
     def set_change_callback(self, on_state_change: Callable[[str, Any], None]):
         self._state_change_cb = on_state_change
 
-    def __init__(self, ):
+    def __init__(self):
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._out_udp.setblocking(False)
 
         self._state_change_cb = lambda key, value: None
-
-        self._close_gps_event = Event()
-        self._close_usbl_event = Event()
+        self._gps_close_event = Event()
+        self._usbl_close_event = Event()
 
     @property
     def addr_echo(self):
@@ -110,7 +113,7 @@ class USBLController:
     @addr_echo.setter
     def addr_echo(self, value):
         if not value:
-            self._addr_echo = None
+            self._addr_echo = value
         else:
             host, port = value.rsplit(':')
             self._addr_echo = (host, int(port))
@@ -133,13 +136,18 @@ class USBLController:
 
     @dev_gps.setter
     def dev_gps(self, value):
-        if self._dev_gps is not None:
-            self._close_gps_event.set()
-            self._dev_gps.close()
+        self._gps_close_event.set()
+        self._gps_close_event = Event()
+
         if value is not None:
-            self._close_gps_event = new_close_event = Event()
-            self._dev_gps = serial.Serial(value)
-            executor.submit(self._read_gps_until_close_requested, new_close_event)
+            self._gps_worker = executor.submit(
+                self._read_gps,
+                lambda: serial.Serial(value, baudrate=4800, exclusive=True, timeout=1),
+                self._gps_close_event
+            )
+        Future().add_done_callback(lambda:
+
+        )
 
     @property
     def dev_usbl(self):
@@ -147,45 +155,75 @@ class USBLController:
 
     @dev_usbl.setter
     def dev_usbl(self, value):
-        if self._dev_usbl is not None:
-            self._close_usbl_event.set()
+        logger = logging.getLogger('USBL')
+        if self._usbl_worker is not None:
+            self._usbl_closing = True
             self._dev_usbl.close()
+            try:
+                self._usbl_worker.result(1)
+            except TimeoutError:
+                logger.warning(f'Worker did not finish')
+
         if value is not None:
-            self._close_usbl_event = new_close_event = Event()
-            self._dev_usbl = serial.Serial(value, baudrate=115200, exclusive=True,
-                inter_byte_timeout=0.1)
-            executor.submit(self._read_usbl_until_close_requested, new_close_event)
+            self._usbl_closing = False
+            try:
+                self._dev_usbl = serial.Serial(value, baudrate=115200, exclusive=True)
+                self._usbl_worker = executor.submit(self._read_usbl)
+            except Exception as e:
+                logger.exception(f'Failed to open device: {e}')
+                raise
 
-    def _read_gps_until_close_requested(self, close_event):
+    def _read_gps(self, device_factory: Callable[[], Serial], close_event: Event):
+        logger = logging.getLogger('GPS')
         try:
-            with self._dev_gps:
-
-                while True:
-                    line = self._dev_gps.readline()
-                    msg = NMEASentence.parse(line)
-                    if msg.sentence_type == 'RMC':
-                        self._last_rmc = msg
-
+            with device_factory() as dev:
+                logger.info(f'Starting to read from {dev.name}')
+                while not close_event.is_set():
+                    line = dev.readline()
                     addr_echo = self._addr_echo
                     if addr_echo is not None:
-                        self._out_udp.sendto(msg.encode(), addr_echo)
+                        self._out_udp.sendto(line, addr_echo)
+                    try:
+                        msg = NMEASentence.parse(line.decode('ascii'))
+                    except UnicodeDecodeError:
+                        logger.warning(f'Invalid character in {line}')
+                        continue
+                    except ParseError as e:
+                        message = e.args[0][0]
+                        logger.warning(f'{message} in {line}')
+                        continue
+                    if msg.sentence_type == 'RMC':
+                        self._last_rmc = msg
         except Exception as e:
-            if not close_event.is_set():
-                logging.error(f'GPS Reader Thread: {e}')
-                self._state_change_cb('dev_gps', self.dev_gps)
+            self._state_change_cb('dev_gps', None)
+            if close_event.is_set():
+                logger.info('Device closed')
+            else:
+                logger.error(f'Device closed unexpectedly: {e}')
 
-    def _read_usbl_until_close_requested(self, close_event):
+    def _read_usbl(self, device_factory: Callable[[], Serial], close_event: Event):
+        logger = logging.getLogger('USBL')
         try:
-            with self._dev_usbl:
+            with device_factory as dev:
+                logger.info(f'Starting to read from {dev.name}')
                 while True:
-                    ln = self._dev_usbl.readline()
-                    rth = NMEASentence.parse(ln)
+                    line = dev.readline()
+                    try:
+                        msg = NMEASentence.parse(line.decode('ascii'))
+                    except UnicodeDecodeError:
+                        logger.warning(f'Invalid character in {line}')
+                        continue
+                    except ParseError as e:
+                        message = e.args[0][0]
+                        logger.warning(f'{message} in {line}')
+                        continue
+                    rth = msg
                     if rth.sentence_type != 'RTH':
                         continue
 
                     rmc = self._last_rmc
                     if rmc is None:
-                        logging.info('ignoring RTH message because RMC is not ready yet')
+                        logger.info('Ignoring message because GPS data is not ready yet')
                         continue
 
                     addr_mav = self._addr_mav
@@ -195,6 +233,8 @@ class USBLController:
                     new_rmc = combine_rmc_rth(rmc, rth)
                     self._out_udp.sendto(new_rmc.encode(), addr_mav)
         except Exception as e:
-            if not close_event.is_set():
-                logging.error(f'USBL Reader Thread: {e}')
-                self._state_change_cb('dev_usbl', self.dev_usbl)
+            self._state_change_cb('dev_usbl', None)
+            if self._usbl_closing:
+                logger.info('Device closed')
+            else:
+                logger.error(f'Device closed unexpectedly: {e}')

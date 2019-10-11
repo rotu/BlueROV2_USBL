@@ -45,7 +45,7 @@ window.addEventListener('load', (event) => {
 
 function on_controller_attr_changed(key, value) {
     add_to_log('info', key + ' is now ' + value);
-
+    //
     switch (key) {
         case 'dev_usbl':
             if (value) {
@@ -89,6 +89,7 @@ function on_usbl_change() {
     if (els.usbl_ok.checked) {
         dev = els.sel_dev_usbl.value || null;
     }
+    add_to_log('info','setting usbl to '+dev);
     window.pr = api.controller_set_attr({'dev_usbl': dev});
 }
 
@@ -110,6 +111,11 @@ function on_mav_change() {
         addr = els.input_mav.value || null;
     }
     api.controller_set_attr({'addr_mav': addr});
+}
+
+function log_json(record) {
+    console.log('app log',record);
+    add_to_log(record.levelname, '[' + record.name + '] ' + record.msg);
 }
 
 function add_to_log(level, msg) {
