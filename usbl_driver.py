@@ -10,6 +10,7 @@ from typing import Any, Callable, Optional, Tuple
 
 from pynmea2 import NMEASentence, RMC, RTH, ChecksumError, SentenceTypeError, ParseError
 from serial import Serial
+from serial.tools import list_ports
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
@@ -120,6 +121,10 @@ class SerialWorkerThread:
                 if self.serial is not None:
                     self.serial.close()
                     self.on_device_changed(None)
+
+
+def list_serial_ports():
+    return list(list_ports.comports())
 
 
 class USBLController:

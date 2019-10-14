@@ -1,12 +1,9 @@
 import argparse
 import logging
 import os
-import sys
 import time
 
-import serial.tools.list_ports
-
-from usbl_driver import USBLController
+from usbl_driver import list_serial_ports, USBLController
 
 parser = argparse.ArgumentParser(
     description='Cerulean USBL Relay: Listen for GPS absolute position data of a base station '
@@ -33,10 +30,10 @@ parser.add_argument(
 
 
 def get_serial_device_summary():
-    result = []
-    result.append('Serial devices detected:')
-    for p in serial.tools.list_ports.comports():
-        result.append('  ' + str(p))
+    result = [
+        'Serial devices detected:',
+        *['  ' + str(p) for p in list_serial_ports()]
+    ]
     return '\r\n'.join(result)
 
 

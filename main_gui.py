@@ -4,9 +4,8 @@ import logging
 from functools import wraps
 
 import webview
-from serial.tools import list_ports
 
-from usbl_driver import USBLController
+from usbl_driver import USBLController, list_serial_ports
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -27,11 +26,9 @@ class Api:
         ## in pywebview, return values from Python don't work reliably
         # return getattr(usbl_controller, attr)
 
-    def get_serial_devices(self, *arg, **kwargs):
+    def get_serial_devices(self):
         try:
-            result = [cp.device for cp in list_ports.comports()]
-            result.append('/dev/debug')
-            return result
+            return [cp.device for cp in list_serial_ports()]
         except Exception as e:
             add_to_log('error', str(e))
 
