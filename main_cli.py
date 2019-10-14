@@ -3,7 +3,7 @@ import logging
 import os
 import time
 
-from usbl_driver import list_serial_ports, USBLController
+from usbl_controller import list_serial_ports, USBLController
 
 parser = argparse.ArgumentParser(
     description='Cerulean USBL Relay: Listen for GPS absolute position data of a base station '

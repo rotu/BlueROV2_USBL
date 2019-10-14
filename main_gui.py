@@ -5,7 +5,7 @@ from functools import wraps
 
 import webview
 
-from usbl_driver import USBLController, list_serial_ports
+from usbl_controller import USBLController, list_serial_ports
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
