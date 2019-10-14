@@ -2,13 +2,13 @@
 
 import logging
 import socket
-from enum import Enum
+import traceback
 from math import cos, radians, sin
 from queue import Queue
 from threading import Event, Thread
 from typing import Any, Callable, Optional, Tuple
 
-from pynmea2 import NMEASentence, RMC, RTH
+from pynmea2 import NMEASentence, RMC, RTH, ChecksumError, SentenceTypeError, ParseError
 from serial import Serial
 
 
@@ -59,26 +59,30 @@ def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
 
 
 class SerialWorkerThread:
-    serial: Optional[Serial]
-    q: Queue[dict]
+    serial: Optional[Serial] = None
+    q: Queue  # [dict]
     thread: Thread
 
     def done(self):
+        """Terminate the thread"""
         self.q.put_nowait({'action': 'done'})
         self.thread.join()
 
     def set_serial_kwargs(self, serial_kwargs: Optional[dict]):
         self.q.put_nowait({'action': 'set_serial_kwargs', 'kwargs': serial_kwargs})
 
-    def __init__(self, name: str,
+    def __init__(
+        self, thread_name: str,
         on_device_changed: Callable[[Optional[str]], None],
-        on_read_line: Callable[[str], None]
+        on_read_line: Callable[[str], None],
+        logger: logging.Logger
     ):
-        self.logger = logging.getLogger(name)
-        self.thread = Thread(target=self._run, name=name + '_thread', daemon=True)
+        self.logger = logger
         self.q = Queue(8)
         self.on_device_changed = on_device_changed
         self.on_read_line = on_read_line
+        self.thread = Thread(target=self._run, name=thread_name, daemon=True)
+        self.thread.start()
 
     def _run(self):
         while True:
@@ -93,21 +97,25 @@ class SerialWorkerThread:
                         self.logger.info('closing device ' + self.serial.name)
                         self.serial.close()
                         self.serial = None
-                    kwargs = action['kwargs']
+                    kwargs = item['kwargs']
                     if kwargs is not None:
-                        self.serial.info('opening device ' + kwargs['port'])
+                        self.logger.info('opening device ' + kwargs['port'])
                         self.serial = Serial(**kwargs)
                     self.on_device_changed(None if self.serial is None else self.serial.port)
 
                 if self.serial is None:
                     continue
                 while self.q.qsize() == 0:
-                    for ln in self.serial.readlines():
-                        ln_str = ln.decode('ascii', 'replace')
-                        try:
-                            self.on_read_line(ln_str)
-                        except Exception as e:
-                            self.logger.warning(str(e) + f' when processing data {ln_str}')
+                    ln = self.serial.readline()
+                    if not ln:
+                        continue
+                    ln_str = ln.decode('ascii', 'replace')
+                    try:
+                        self.on_read_line(ln_str)
+                    except Exception as e:
+                        self.logger.warning(f'when processing data {ln}: {traceback.format_exc()}')
+            except Exception:
+                self.logger.error(f'Device encountered an error: {traceback.format_exc()}')
             finally:
                 if self.serial is not None:
                     self.serial.close()
@@ -127,7 +135,7 @@ class USBLController:
     def set_change_callback(self, on_state_change: Callable[[str, Any], None]):
         self._state_change_cb = on_state_change
 
-    def __init__(self):
+    def __init__(self, logger=None):
         self._out_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._out_udp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._out_udp.setblocking(False)
@@ -136,16 +144,19 @@ class USBLController:
 
         self._close_gps_event = Event()
         self._close_usbl_event = Event()
+        self.logger = logger or logging.getLogger()
 
         self.usbl_worker = SerialWorkerThread(
-            'USBL',
+            thread_name='usbl_reader_thread',
             on_device_changed=self._on_usbl_changed,
-            on_read_line=self._on_usbl_line
+            on_read_line=self._on_usbl_line,
+            logger=self.logger.getChild('usbl'),
         )
         self.gps_worker = SerialWorkerThread(
-            'GPS',
+            thread_name='gps_reader_thread',
             on_device_changed=self._on_gps_changed,
-            on_read_line=self._on_gps_line
+            on_read_line=self._on_gps_line,
+            logger=self.logger.getChild('gps'),
         )
 
     def _on_usbl_changed(self, value):
@@ -186,7 +197,8 @@ class USBLController:
 
     @dev_gps.setter
     def dev_gps(self, value):
-        self.gps_worker.set_serial_kwargs({'port': value, 'baudrate': 4800, 'exclusive': True})
+        self.gps_worker.set_serial_kwargs({'port': value, 'baudrate': 4800, 'exclusive': True,
+            'timeout': 0.3})
 
     @property
     def dev_usbl(self):
@@ -194,20 +206,37 @@ class USBLController:
 
     @dev_usbl.setter
     def dev_usbl(self, value):
-        self.usbl_worker.set_serial_kwargs({'port': value, 'baudrate': 115200, 'exclusive': True})
+        self.usbl_worker.set_serial_kwargs({'port': value, 'baudrate': 115200, 'exclusive':
+            True, 'timeout': 0.3})
 
     def _on_gps_line(self, ln):
-        msg = NMEASentence.parse(ln)
-        if msg.sentence_type == 'RMC':
-            self._last_rmc = msg
-
         addr_echo = self._addr_echo
         if addr_echo is not None:
-            self._out_udp.sendto(msg.encode(), addr_echo)
+            self._out_udp.sendto(ln.encode(), addr_echo)
+
+        if ln[3:6] != 'RMC':
+            return
+        try:
+            rmc = NMEASentence.parse(ln)
+        except ChecksumError:
+            self.logger.debug(f'Ignoring message with bad checksum: {ln}')
+            return
+        except SentenceTypeError:
+            self.logger.debug(f'Ignoring message with unrecognized sentence type: {ln}')
+            return
+        except ParseError:
+            return
+
+        if not rmc.is_valid:
+            self.logger.info(f'No GPS fix.')
+            return
+
+        self._last_rmc = rmc
 
     def _on_usbl_line(self, ln):
         rth = NMEASentence.parse(ln)
         if rth.sentence_type != 'RTH':
+            logging.debug(f'Ignoring unexpected message from USBL. Expected a RTH sentence: {rth}')
             return
 
         rmc = self._last_rmc
@@ -220,4 +249,4 @@ class USBLController:
             return
 
         new_rmc = combine_rmc_rth(rmc, rth)
-        self._out_udp.sendto(new_rmc.encode(), addr_mav)
+        self._out_udp.sendto(str(new_rmc).encode() + b'\r\n', addr_mav)
