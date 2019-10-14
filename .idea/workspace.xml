@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="9b3417d5-1f5a-4d91-b6b7-423a60c6953e" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/BlueROV2_USBL.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations/main.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main_cli.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main_gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/usbl_driver.py" beforeDir="false" afterPath="$PROJECT_DIR$/usbl_driver.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CoverageViewManager">
+    <option name="myElementSize" value="424" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="JavaScript File" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IgnoredFileRootStore">
+    <option name="generatedRoots">
+      <set>
+        <option value="$PROJECT_DIR$/.idea" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectId" id="1RiAu6WouiD5pleyauQoXTcltQW" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="Python" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
+    <property name="restartRequiresConfirmation" value="false" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="PyCoverageOptionsProvider">
+    <option name="myUseBundledCoveragePy" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.main">
+    <configuration name="main help" type="PythonConfigurationType" factoryName="Python">
+      <module name="BlueROV2_USBL" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+        </ENTRIES>
+      </EXTENSION>
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main_cli.py" />
+      <option name="PARAMETERS" value="--help" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="main_gui" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="BlueROV2_USBL" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main_gui.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.main" />
+      <item itemvalue="Python.main help" />
+      <item itemvalue="Python.main_gui" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.main" />
+        <item itemvalue="Python.main_gui" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9b3417d5-1f5a-4d91-b6b7-423a60c6953e" name="Default Changelist" comment="" />
+      <created>1570139762483</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1570139762483</updated>
+      <workItem from="1570139765907" duration="24000" />
+      <workItem from="1570139799026" duration="292000" />
+      <workItem from="1570141525291" duration="610000" />
+      <workItem from="1570473087817" duration="846000" />
+      <workItem from="1570475442564" duration="3801000" />
+      <workItem from="1570481007298" duration="20539000" />
+      <workItem from="1570501624363" duration="8558000" />
+      <workItem from="1570558912342" duration="20000" />
+      <workItem from="1570558941617" duration="15538000" />
+      <workItem from="1570727709620" duration="4000" />
+      <workItem from="1570727722486" duration="3000" />
+      <workItem from="1570744086515" duration="25000" />
+      <workItem from="1570744126203" duration="11046000" />
+      <workItem from="1570825849252" duration="1823000" />
+      <workItem from="1571082489121" duration="12661000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="735" y="533" width="1084" height="681" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1571094986380">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="735" y="533" width="1084" height="681" key="#com.intellij.execution.impl.EditConfigurationsDialog/67.27.3373.1413@67.27.3373.1413" timestamp="1571094986380" />
+    <state x="1406" y="676" width="1850" height="764" key="#xdebugger.evaluate" timestamp="1571093912834">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="1406" y="676" width="1850" height="764" key="#xdebugger.evaluate/67.27.3373.1413@67.27.3373.1413" timestamp="1571093912834" />
+    <state width="1068" height="644" key="DebuggerActiveHint" timestamp="1570749319671">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1068" height="644" key="DebuggerActiveHint/67.27.3373.1413@67.27.3373.1413" timestamp="1570749319671" />
+    <state x="1585" y="485" width="424" height="484" key="FileChooserDialogImpl" timestamp="1571082665502">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="1585" y="485" width="424" height="484" key="FileChooserDialogImpl/67.27.3373.1413@67.27.3373.1413" timestamp="1571082665502" />
+    <state width="1641" height="383" key="GridCell.Tab.0.bottom" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.0.bottom/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state width="1641" height="383" key="GridCell.Tab.0.center" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.0.center/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state width="1641" height="383" key="GridCell.Tab.0.left" timestamp="1571095193101">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.0.left/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193101" />
+    <state width="1641" height="383" key="GridCell.Tab.0.right" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.0.right/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state width="1641" height="383" key="GridCell.Tab.1.bottom" timestamp="1571095193103">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.1.bottom/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193103" />
+    <state width="1641" height="383" key="GridCell.Tab.1.center" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.1.center/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state width="1641" height="383" key="GridCell.Tab.1.left" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.1.left/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state width="1641" height="383" key="GridCell.Tab.1.right" timestamp="1571095193102">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state width="1641" height="383" key="GridCell.Tab.1.right/67.27.3373.1413@67.27.3373.1413" timestamp="1571095193102" />
+    <state x="1092" y="461" width="824" height="508" key="IDE.errors.dialog" timestamp="1571082817394">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="1092" y="461" width="824" height="508" key="IDE.errors.dialog/67.27.3373.1413@67.27.3373.1413" timestamp="1571082817394" />
+    <state x="2182" y="353" key="SettingsEditor" timestamp="1571085963173">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2182" y="353" key="SettingsEditor/67.27.3373.1413@67.27.3373.1413" timestamp="1571085963173" />
+    <state x="1480" y="1208" width="511" height="232" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate" timestamp="1570829911073">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="1480" y="1208" width="511" height="232" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate/67.27.3373.1413@67.27.3373.1413" timestamp="1570829911073" />
+    <state x="2213" y="391" width="925" height="684" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2" timestamp="1570565290606">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2213" y="391" width="925" height="684" key="com.intellij.xdebugger.impl.breakpoints.ui.BreakpointsDialogFactory$2/67.27.3373.1413@67.27.3373.1413" timestamp="1570565290606" />
+    <state x="2109" y="68" width="1331" height="1105" key="dock-window-1" timestamp="1571084267253">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2109" y="68" width="1331" height="1105" key="dock-window-1/67.27.3373.1413@67.27.3373.1413" timestamp="1571084267253" />
+    <state x="1866" y="174" width="1331" height="1105" key="dock-window-2" timestamp="1571084844161">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="1866" y="174" width="1331" height="1105" key="dock-window-2/67.27.3373.1413@67.27.3373.1413" timestamp="1571084844161" />
+    <state x="2109" y="27" width="1331" height="1105" key="dock-window-3" timestamp="1571084868482">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2109" y="27" width="1331" height="1105" key="dock-window-3/67.27.3373.1413@67.27.3373.1413" timestamp="1571084868482" />
+    <state x="2109" y="27" width="1331" height="1105" key="dock-window-4" timestamp="1571084982725">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2109" y="27" width="1331" height="1105" key="dock-window-4/67.27.3373.1413@67.27.3373.1413" timestamp="1571084982725" />
+    <state x="998" y="208" width="1331" height="618" key="dock-window-5" timestamp="1571090782902">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="998" y="208" width="1331" height="618" key="dock-window-5/67.27.3373.1413@67.27.3373.1413" timestamp="1571090782902" />
+    <state x="2260" y="474" width="724" height="486" key="find.popup" timestamp="1571095107574">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2260" y="474" width="724" height="486" key="find.popup/67.27.3373.1413@67.27.3373.1413" timestamp="1571095107574" />
+    <state x="2374" y="358" width="672" height="678" key="search.everywhere.popup" timestamp="1571089055812">
+      <screen x="67" y="27" width="3373" height="1413" />
+    </state>
+    <state x="2374" y="358" width="672" height="678" key="search.everywhere.popup/67.27.3373.1413@67.27.3373.1413" timestamp="1571089055812" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/usbl_driver.py</url>
+          <line>251</line>
+          <option name="timeStamp" value="40" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/usbl_driver.py</url>
+          <line>233</line>
+          <option name="timeStamp" value="41" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnlyOnFirst="true" notifyOnTerminate="true" ignoreLibraries="true" exception="BaseException">
+            <option name="ignoreLibraries" value="true" />
+            <option name="notifyOnTerminate" value="true" />
+            <option name="notifyOnlyOnFirst" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/BlueROV2_USBL$main_help.coverage" NAME="main help Coverage Results" MODIFIED="1571092628527" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlueROV2_USBL$main_gui.coverage" NAME="main_gui Coverage Results" MODIFIED="1571086068514" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlueROV2_USBL$main__1_.coverage" NAME="main (1) Coverage Results" MODIFIED="1570489032782" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlueROV2_USBL$main.coverage" NAME="main Coverage Results" MODIFIED="1570752275270" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/BlueROV2_USBL$main_cli.coverage" NAME="main Coverage Results" MODIFIED="1571095193082" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/_$main.coverage" NAME="main Coverage Results" MODIFIED="1570480948517" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.." />
+  </component>
+</project>
