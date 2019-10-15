@@ -26,7 +26,7 @@ class Api:
         ## in pywebview, return values from Python don't work reliably
         # return getattr(usbl_controller, attr)
 
-    def get_serial_devices(self):
+    def get_serial_devices(self, _):
         try:
             return [cp.device for cp in list_serial_ports()]
         except Exception as e:
@@ -69,8 +69,10 @@ class AppLoggingHandler(logging.Handler):
         add_to_log(record.levelname.lower(), record.msg)
 
 
-my_handler = AppLoggingHandler()
-logger.addHandler(my_handler)
+logging.basicConfig(
+    level='INFO',
+    handlers=[AppLoggingHandler(), logging.StreamHandler()]
+)
 
 usbl_controller.set_change_callback(on_controller_attr_changed)
 

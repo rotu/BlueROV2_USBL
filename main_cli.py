@@ -42,18 +42,13 @@ args = parser.parse_args()
 if args.usbl is None or args.gps is None:
     parser.error("GPS and USBL devices must be specified\n\n" + get_serial_device_summary())
 
+logging.basicConfig(
+    level=args.log.upper(),
+    format='%(threadName)-5s %(levelname)-8s %(message)s'
+)
 
-class AppLoggingHandler(logging.Handler):
-    def emit(self, record: logging.LogRecord):
-        print(self.format(record))
-
-
-logger = logging.getLogger()
-logger.setLevel(args.log.upper())
-logger.addHandler(AppLoggingHandler())
-
-c = USBLController(logger=logger)
-c.set_change_callback(lambda key, value: logger.info(f'{key} = {value}'))
+c = USBLController()
+c.set_change_callback(lambda key, value: logging.info(f'{key} is now {value}'))
 c.dev_usbl = args.usbl
 c.dev_gps = args.gps
 c.addr_echo = args.echo
