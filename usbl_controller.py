@@ -3,7 +3,7 @@ import logging
 import socket
 import traceback
 from io import RawIOBase
-from math import cos, radians, sin
+from math import cos, radians, sin, degrees, pi
 from pathlib import Path
 from queue import Queue
 from threading import Event, Thread
@@ -24,19 +24,27 @@ def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
     return (
         signed_degrees >= 0,
         int(unsigned_degrees),
-        unsigned_degrees % 60
+        (unsigned_degrees * 60) % 60
     )
 
 
-def lat_long_per_meter(current_latitude_degrees):
-    """Returns the number of degrees per meter, in latitude and longitude"""
-    # based on https://en.wikipedia.org/wiki/Geographic_coordinate_system#Length_of_a_degree
-    phi = radians(current_latitude_degrees)
-    deg_lat_per_meter = 111132.92 - 559.82 * cos(2 * phi) + 1.175 * cos(4 * phi) - 0.0023 * cos(
-        6 * phi)
-    deg_long_per_meter = 111412.84 * cos(phi) - 93.5 * cos(3 * phi) + 0.118 * cos(5 * phi)
-    return deg_lat_per_meter, deg_long_per_meter
-
+#
+# def lat_lon_per_meter(current_latitude_degrees):
+#     """Returns the number of degrees per meter, in latitude and longitude"""
+#     # # based on https://en.wikipedia.org/wiki/Geographic_coordinate_system#Length_of_a_degree
+#     # phi = radians(current_latitude_degrees)
+#     # meters_per_lat = 111132.92 - 559.82 * cos(2 * phi) + 1.175 * cos(4 * phi) - 0.0023 * cos(
+#     #     6 * phi)
+#     # meters_per_lon = 111412.84 * cos(phi) - 93.5 * cos(3 * phi) + 0.118 * cos(5 * phi)
+#
+#     #https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude
+#     -longitude-by-some-amount-of-meters/2968
+#     R = 6378137
+#     lat_per_meter = degrees(1/R)
+#     lon_per_meter = degrees(1/(R*cos(radians(current_latitude_degrees))))
+#
+#     return lat_per_meter, lon_per_meter
+#
 
 def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
     compass_bearing = rth.cb
@@ -44,16 +52,30 @@ def combine_rmc_rth(rmc: RMC, rth: RTH) -> RMC:
     true_elevation = rth.te
 
     horizontal_range = slant_range * cos(radians(true_elevation))
-    d_lat, d_lon = lat_long_per_meter(rmc.latitude)
-    new_lat = rmc.latitude + cos(radians(compass_bearing)) * horizontal_range * d_lat
-    new_lon = rmc.latitude + sin(radians(compass_bearing)) * horizontal_range * d_lon
+
+    dn = cos(radians(compass_bearing)) * horizontal_range
+    de = sin(radians(compass_bearing)) * horizontal_range
+    R = 6378137
+
+    dLat = dn / R
+    dLon = de / (R * cos(radians(rmc.latitude)))
+
+    new_lat = rmc.latitude + degrees(dLat)
+    new_lon = rmc.longitude + degrees(dLon)
+
+    # newLatDegrees, newLatMinutes = ddToDDM(newLat)
+    # newLonDegrees, newLonMinutes = ddToDDM(newLon)
+
+    # d_lat, d_lon = lat_lon_per_meteddr(rmc.latitude)
+    # new_lat = rmc.latitude + cos(radians(compass_bearing)) * horizontal_range * d_lat
+    # new_lon = rmc.longitude + sin(radians(compass_bearing)) * horizontal_range * d_lon
     lat_sgn, lat_deg, lat_min = degrees_to_sdm(new_lat)
     lon_sgn, lon_deg, lon_min = degrees_to_sdm(new_lon)
     new_rmc_data = [
         *rmc.data[:2],
-        f'{lat_deg:02d}{lat_min:.5f}',
+        f'{lat_deg:02d}{lat_min:06.3f}',
         {True: 'N', False: 'S'}[lat_sgn],
-        f'{lon_deg:02d}{lon_min:.5f}',
+        f'{lon_deg:02d}{lon_min:06.3f}',
         {True: 'E', False: 'W'}[lon_sgn],
         '',
         '',
@@ -210,7 +232,7 @@ class USBLController:
     def dev_gps(self, value):
 
         self.gps_worker.set_serial_kwargs(
-            None if value is None else {'port': value, 'baudrate': 4800, 'exclusive': True,
+            None if value is None else {'port': value, 'baudrate': 4800, 'exclusive': False,
                 'timeout': 0.3})
 
     @property
@@ -221,7 +243,7 @@ class USBLController:
     def dev_usbl(self, value):
 
         self.usbl_worker.set_serial_kwargs(None if value is None else {
-            'port': value, 'baudrate': 115200, 'exclusive': True, 'timeout': 0.3})
+            'port': value, 'baudrate': 115200, 'exclusive': False, 'timeout': 0.3})
 
     def _on_gps_line(self, ln):
         addr_echo = self._addr_echo
@@ -240,7 +262,7 @@ class USBLController:
             return
         except ParseError:
             return
-
+        # logging.info(ln)
         if not rmc.is_valid:
             logging.info(f'No GPS fix.')
             return
@@ -249,6 +271,7 @@ class USBLController:
 
     def _on_usbl_line(self, ln):
         rth = NMEASentence.parse(ln)
+        logging.info('RTH: ' + ln)
         if rth.sentence_type != 'RTH':
             logging.debug(f'Ignoring unexpected message from USBL. Expected a RTH sentence: {rth}')
             return
