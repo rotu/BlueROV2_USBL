@@ -232,7 +232,7 @@ class USBLController:
     def dev_gps(self, value):
 
         self.gps_worker.set_serial_kwargs(
-            None if value is None else {'port': value, 'baudrate': 4800, 'exclusive': False,
+            None if value is None else {'port': value, 'baudrate': 4800,
                 'timeout': 0.3})
 
     @property
@@ -243,7 +243,7 @@ class USBLController:
     def dev_usbl(self, value):
 
         self.usbl_worker.set_serial_kwargs(None if value is None else {
-            'port': value, 'baudrate': 115200, 'exclusive': False, 'timeout': 0.3})
+            'port': value, 'baudrate': 115200, 'timeout': 0.3})
 
     def _on_gps_line(self, ln):
         addr_echo = self._addr_echo
