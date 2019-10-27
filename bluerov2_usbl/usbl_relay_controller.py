@@ -3,7 +3,7 @@ import logging
 import socket
 import traceback
 from io import RawIOBase
-from math import cos, radians, sin, degrees, pi
+from math import cos, radians, sin, degrees
 from pathlib import Path
 from queue import Queue
 from threading import Event, Thread
@@ -13,7 +13,7 @@ from pynmea2 import ChecksumError, NMEASentence, ParseError, RMC, RTH, SentenceT
 from serial import Serial
 from serial.tools import list_ports
 
-from mock_serial import MockSerial
+from .mock_serial import MockSerial
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):

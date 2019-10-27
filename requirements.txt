@@ -1,4 +1,0 @@
--e git+https://github.com/NickNothom/pynmea2.git#egg=pynmea2
-pyserial
-pyinstaller
-pywebview[qt,cef]
