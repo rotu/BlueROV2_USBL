@@ -13,7 +13,7 @@ from pynmea2 import ChecksumError, NMEASentence, ParseError, RMC, RTH, SentenceT
 from serial import Serial
 from serial.tools import list_ports
 
-from .mock_serial import MockSerial
+from bluerov2_usbl.mock_serial import MockSerial
 
 
 def degrees_to_sdm(signed_degrees: float) -> (bool, int, float):
