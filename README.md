@@ -4,8 +4,9 @@
 
 With python3.6 or later, the following command will install all dependencies locally:
 ```
-pip3 install --user git+https://github.com/rotu/BlueROV2_USBL.git
+pip3 install --user --force-reinstall git+https://github.com/rotu/BlueROV2_USBL.git
 ```
+Note the `--force-reinstall` flag. This is required if you already have `pynmea2` installed to get our custom modified branch.
 
 You should then be able to run the command:
 ```
